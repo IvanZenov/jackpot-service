@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  kafka:
+    image: bitnami/kafka:3.5.1
+    container_name: kafka
+    ports:
+      - "9092:9092"
+    environment:
+      # Enable KRaft mode
+      KAFKA_CFG_PROCESS_ROLES: broker,controller
+      KAFKA_CFG_NODE_ID: 1
+
+      # Listener config
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+
+      # KRaft quorum (single node)
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+
+      # Kafka topics
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_CFG_NUM_PARTITIONS: 3
+
+    volumes:
+      - kafka_data:/bitnami/kafka
+
+  kafka-topics-creator:
+    image: bitnami/kafka:3.5.1
+    depends_on:
+      - kafka
+    entrypoint: >
+      sh -c "
+      echo 'Waiting for Kafka...' &&
+      sleep 15 &&
+      kafka-topics.sh --bootstrap-server kafka:9092 --create --topic jackpot-bets --partitions 3 --replication-factor 1 &&
+      echo 'Topic jackpot-bets created.'"
+
+volumes:
+  kafka_data:
